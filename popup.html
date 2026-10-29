@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>&#9632; Volume Cap &#9632;</h1>
+
+  <div class="unit" id="boostUnit">
+    <div class="head">
+      <span class="led"></span>Boost
+      <span class="val" id="boostVal"></span>
+      <button class="switch" id="boostOn"></button>
+    </div>
+    <input id="boost" type="range" min="0" max="600" step="10">
+    <small>Makes everything louder first.</small>
+  </div>
+
+  <div class="unit" id="capUnit">
+    <div class="head">
+      <span class="led"></span>Max loud
+      <span class="val" id="ceilingVal"></span>
+      <button class="switch" id="capOn"></button>
+    </div>
+    <input id="ceiling" type="range" min="-48" max="0" step="1">
+    <small>Nothing gets louder than this. Lower = quieter screams.</small>
+  </div>
+
+  <div class="screen">
+    <div class="top"><span id="peak"></span><span id="cut"></span></div>
+    <canvas id="graph"></canvas>
+  </div>
+
+  <div id="error"></div>
+  <button class="switch" id="off">&#9211; Turn off for this tab</button>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

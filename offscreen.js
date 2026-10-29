@@ -34,6 +34,13 @@ async function capture(tabId, streamId) {
     tab.history.push(data.peak);
     if (tab.history.length > HISTORY) tab.history.shift();
   };
+  // The browser can end the capture on its own (e.g. the tab is discarded).
+  stream.getTracks().forEach((track) => {
+    track.onended = () => {
+      if (tabs[tabId] !== tab) return;
+      chrome.runtime.sendMessage({ to: 'sw', type: 'ended', tabId });
+    };
+  });
   return (tabs[tabId] = tab);
 }
 
@@ -44,18 +51,23 @@ function apply(tab, settings) {
   tab.limiter.parameters.get('bypass').value = s.capOn ? 0 : 1;
 }
 
+// Stopping the tracks ends the capture and unmutes the tab.
 async function stop(tabId) {
   const tab = tabs[tabId];
   delete tabs[tabId];
-  tab.stream.getTracks().forEach((track) => track.stop());
-  await tab.ctx.close();
+  if (tab) {
+    tab.limiter.port.onmessage = null;
+    tab.stream.getTracks().forEach((track) => track.stop());
+    await tab.ctx.close();
+  }
+  return { active: Object.keys(tabs).length };
 }
 
 async function handle({ type, tabId, streamId, settings }) {
+  if (type === 'stop') return stop(tabId);
   let tab = tabs[tabId];
   if (type === 'start' && !tab) tab = await capture(tabId, streamId);
   if (!tab) return null;
-  if (type === 'stop') return stop(tabId).then(() => null);
   if (settings) apply(tab, settings);
   const { history, cut, lastAt } = tab;
   return { settings: tab.settings, history, cut, lastAt };

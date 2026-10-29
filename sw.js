@@ -23,7 +23,18 @@ async function ensureOffscreen() {
   });
 }
 
+async function stop(tabId) {
+  chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {}); // tab may be gone
+  if (!(await hasOffscreen())) return null;
+  const { active } = (await toOffscreen({ type: 'stop', tabId })) ?? {};
+  // Nothing left to process: drop the offscreen document as well.
+  if (!active) await chrome.offscreen.closeDocument().catch(() => {});
+  return null;
+}
+
 async function handle(msg) {
+  if (msg.type === 'stop' || msg.type === 'ended') return stop(msg.tabId);
+  if (msg.type === 'get' && !(await hasOffscreen())) return null;
   await ensureOffscreen();
   if (msg.type !== 'start') return toOffscreen(msg);
 
@@ -41,13 +52,8 @@ async function handle(msg) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg.to !== 'sw') return;
-  if (msg.type === 'stop') {
-    chrome.action.setBadgeText({ tabId: msg.tabId, text: '' });
-  }
   handle(msg).then(reply, (e) => reply({ error: e.message || String(e) }));
   return true;
 });
 
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-  if (await hasOffscreen()) toOffscreen({ type: 'stop', tabId });
-});
+chrome.tabs.onRemoved.addListener((tabId) => stop(tabId));
